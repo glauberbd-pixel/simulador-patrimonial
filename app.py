@@ -52,7 +52,7 @@ if botao_calcular:
         except:
             pass
 
-        # 2. BOTÃO WHATSAPP (Ação direta para você)
+        # 2. BOTÃO WHATSAPP
         st.markdown("---")
         msg = f"Olá Glauber, meu nome é {nome_cliente}. Fiz a simulação e minha economia seria de R$ {economia:,.2f}. Quero saber mais!"
         link_wa = f"https://wa.me/5537991478808?text={msg.replace(' ', '%20')}"
