@@ -14,6 +14,9 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# URL da Planilha Fornecida
+URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1BuFZ7Rpt0aGk3lgEc4WY8rXeWYS5_Cf6_-tAqf59lCA/edit?usp=sharing"
+
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
 except:
@@ -83,7 +86,7 @@ if botao_calcular:
             "Lucro Real (Expert)": [f"R$ {aluguel_bruto:,.2f}", f"R$ {soma_despesas:,.2f}", f"R$ {depreciacao_mensal:,.2f}", f"R$ {imposto_real:,.2f}", f"R$ {aluguel_bruto-imposto_real:,.2f}"]
         })
         st.table(df_renda)
-        st.info(f"🎯 **Parecer Técnico Tributário:** Sua melhor opção é **{melhor_opcao_txt}**. Isso gera uma economia direta de **R$ {economia_mes:,.2f}/mês** comparado à Pessoa Física, aproveitando deduções que você hoje ignora.")
+        st.info(f"🎯 **Parecer Técnico Tributário:** Sua melhor opção é **{melhor_opcao_txt}**. Isso gera uma economia direta de **R$ {economia_mes:,.2f}/mês** comparado à Pessoa Física.")
 
         st.markdown("---")
 
@@ -128,16 +131,20 @@ if botao_calcular:
         link_wa = f"https://wa.me/5537991478808?text={msg.replace(' ', '%20')}"
         st.link_button("SOLICITAR MEU DIAGNÓSTICO PERSONALIZADO 📲", link_wa, type="primary", use_container_width=True)
 
-        # Registro no GSheets
+        # Registro na Planilha Específica
         try:
             df_envio = pd.DataFrame([{
                 "Data": pd.Timestamp.now().strftime("%d/%m/%Y %H:%M"),
                 "Nome": nome_cliente,
                 "Whats": whats_cliente,
+                "Patrimonio": valor_patrimonio,
+                "Aluguel": aluguel_bruto,
+                "Melhor_Opcao": melhor_opcao_txt,
                 "Econ_Tributaria_Ano": round(economia_ano, 2),
                 "Econ_Sucessoria": round(economia_sucessoria, 2)
             }])
-            conn.create(data=df_envio)
-            st.toast("Simulação registrada!")
-        except:
-            pass
+            # Enviando para a planilha via URL
+            conn.create(spreadsheet=URL_PLANILHA, data=df_envio)
+            st.toast("Simulação registrada na sua planilha! 📊")
+        except Exception as e:
+            st.error(f"Erro ao salvar na planilha: {e}")
