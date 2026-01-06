@@ -2,89 +2,131 @@ import streamlit as st
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 
-# --- CONFIGURAÇÃO VISUAL PREMIUM (BLACK & GOLD) ---
+# --- CONFIGURAÇÃO VISUAL PREMIUM ---
 st.set_page_config(page_title="Holding Patrimônio | Inteligência Tributária", layout="wide")
 st.markdown("""
     <style>
     .main { background-color: #0c0c0c; color: #e0e0e0; }
     .stMetric { background-color: #1a1a1a; border: 1px solid #333; padding: 20px; border-radius: 10px; }
-    div[data-testid="stMetricValue"] { color: #d4af37 !important; font-size: 28px !important; }
+    div[data-testid="stMetricValue"] { color: #d4af37 !important; font-size: 26px !important; }
     .stTable { background-color: #1a1a1a; border-radius: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# Conexão com a Planilha
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
 except:
     pass
 
-# TÍTULO SOLICITADO
 st.title("🏛️ HOLDING PATRIMÔNIO")
-st.subheader("Simulador Expert de Estrutura Patrimonial (2026)")
+st.subheader("Simulador de Inteligência Fiscal e Sucessória")
 
-# --- BARRA LATERAL (ENTRADA DE DADOS) ---
+# --- ENTRADA DE DADOS UNIFICADA E SUGESTIVA ---
 with st.sidebar:
     st.header("👤 Identificação")
     nome_cliente = st.text_input("Nome do Investidor")
     whats_cliente = st.text_input("WhatsApp (com DDD)")
     
     st.markdown("---")
-    st.header("💰 Renda Mensal Bruta")
-    aluguel_bruto = st.number_input("Renda de Aluguéis (R$)", value=20000.0, step=1000.0)
+    st.header("💰 Receita de Locação")
+    aluguel_bruto = st.number_input("Receita Bruta Mensal (R$)", value=20000.0, step=1000.0)
     
-    with st.expander("📝 Detalhar Despesas PF", expanded=True):
-        taxa_adm = st.number_input("Taxa Imobiliária (Adm)", value=aluguel_bruto*0.1)
-        iptu_dono = st.number_input("IPTU/Taxas (Dono)", value=500.0)
-        saude_educ = st.number_input("Saúde/Educação", value=1500.0)
+    st.markdown("---")
+    st.header("📑 Despesas Operacionais")
+    st.caption("Preencha todos os custos que você tem com seus imóveis e gestão:")
+    
+    # Lista Única e Sugestiva
+    taxa_adm = st.number_input("Comissão de Imobiliária/Adm", value=aluguel_bruto*0.1)
+    iptu_cond = st.number_input("IPTU e Condomínio (Pagos pelo Proprietário)", value=1000.0)
+    manutencao = st.number_input("Manutenções e Reformas nos Imóveis", value=500.0)
+    contabilidade = st.number_input("Contabilidade e Jurídico", value=800.0)
+    seguros_taxas = st.number_input("Seguros e Taxas Bancárias", value=200.0)
+    
+    # Depreciação (Sugerida para Lucro Real)
+    valor_imoveis = st.number_input("Valor total dos Imóveis (para cálculo de Depreciação)", value=1000000.0)
+    depreciacao_mensal = (valor_imoveis * 0.04) / 12 # 4% ao ano
+    
+    botao_calcular = st.button("GERAR RAIO-X DE ELISÃO FISCAL 🚀", type="primary")
 
-    with st.expander("🏢 Detalhar Custos Holding", expanded=False):
-        pj_contador = st.number_input("Honorários Contábeis", value=650.0)
-        pj_taxas = st.number_input("Tarifas/Taxas PJ", value=50.0)
-
-    botao_calcular = st.button("GERAR RAIO-X DETALHADO 🚀", type="primary")
-
-# --- LÓGICA DE CÁLCULO E LAYOUT ---
+# --- LÓGICA DE SEPARAÇÃO PARA RELATÓRIO ---
 if botao_calcular:
     if not nome_cliente or not whats_cliente:
-        st.error("Por favor, preencha o Nome e WhatsApp na barra lateral.")
+        st.error("Por favor, identifique-se para gerar o relatório.")
     else:
-        # Cálculos de Imposto
-        imposto_pf = ((aluguel_bruto - taxa_adm - iptu_dono - saude_educ) * 0.275) - 896
-        imposto_pj_presumido = aluguel_bruto * 0.1133
-        imposto_pj_real = (aluguel_bruto * 0.32) * 0.34 # Estimativa simplificada
+        # 1. CÁLCULO PESSOA FÍSICA (Carnê-Leão)
+        # Deduções permitidas: Adm, IPTU, Condomínio e Manutenções essenciais
+        base_pf = aluguel_bruto - taxa_adm - iptu_cond - manutencao
+        if base_pf < 0: base_pf = 0
+        imposto_pf = (base_pf * 0.275) - 896
         
-        economia = imposto_pf - imposto_pj_presumido
-
-        # 1. MÉTRICAS EM CARTÕES (Como na imagem 1000201857.png)
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Pessoa Física (Líquido)", f"R$ {aluguel_bruto - imposto_pf:,.2f}", f"Imposto: R$ {imposto_pf:,.2f}", delta_color="inverse")
-        with col2:
-            st.metric("Presumido (Líquido)", f"R$ {aluguel_bruto - imposto_pj_presumido:,.2f}", f"Economia: R$ {economia:,.2f}")
-        with col3:
-            st.metric("Lucro Real (Líquido)", f"R$ {aluguel_bruto - imposto_pj_real:,.2f}", f"Imposto: R$ {imposto_pj_real:,.2f}", delta_color="inverse")
-
-        # 2. TABELA COMPARATIVA (CHECKLIST)
-        st.markdown("### 📋 Detalhamento Lado a Lado (Checklist)")
-        df_comp = pd.DataFrame({
-            "Etapa do Cálculo": ["1. (+) Receita Bruta", "2. (-) Despesas Operacionais", "3. (=) Base de Cálculo", "4. (-) IMPOSTO TOTAL", "5. (=) DINHEIRO NO BOLSO"],
-            "Pessoa Física": [f"R$ {aluguel_bruto:,.2f}", f"R$ {taxa_adm + iptu_dono:,.2f}", f"R$ {aluguel_bruto - taxa_adm - iptu_dono:,.2f}", f"R$ {imposto_pf:,.2f}", f"R$ {aluguel_bruto - imposto_pf:,.2f}"],
-            "Holding (Presumido)": [f"R$ {aluguel_bruto:,.2f}", f"R$ {pj_contador + pj_taxas:,.2f}", f"R$ {aluguel_bruto * 0.32:,.2f}", f"R$ {imposto_pj_presumido:,.2f}", f"R$ {aluguel_bruto - imposto_pj_presumido:,.2f}"],
-            "Holding (Lucro Real)": [f"R$ {aluguel_bruto:,.2f}", f"R$ {pj_contador + pj_taxas:,.2f}", f"R$ {aluguel_bruto * 0.15:,.2f}", f"R$ {imposto_pj_real:,.2f}", f"R$ {aluguel_bruto - imposto_pj_real:,.2f}"]
-        })
-        st.table(df_comp)
-
-        # 3. CONCLUSÃO E BOTÃO WHATSAPP
-        st.success(f"🧠 **Inteligência Artificial Patrimonial:** O Lucro Presumido é o campeão! Ganho de R$ {economia:,.2f}/mês sobre a PF.")
+        # 2. CÁLCULO LUCRO PRESUMIDO
+        # Imposto fixo sobre a receita (aprox. 11.33% a 14.53% dependendo da cidade)
+        imposto_presumido = aluguel_bruto * 0.1133
         
-        msg = f"Olá, sou {nome_cliente}. Simulei na Holding Patrimônio e vi uma economia de R$ {economia:,.2f}. Quero falar com o Glauber!"
+        # 3. CÁLCULO LUCRO REAL (Onde a elisão é maximizada)
+        # Todas as despesas deduzem + Depreciação (despesa sem saída de caixa)
+        total_despesas_real = taxa_adm + iptu_cond + manutencao + contabilidade + seguros_taxas + depreciacao_mensal
+        lucro_liquido_real = aluguel_bruto - total_despesas_real
+        if lucro_liquido_real < 0: lucro_liquido_real = 0
+        imposto_real = lucro_liquido_real * 0.34 # IRPJ + CSLL
+
+        # --- RELATÓRIO FINAL EM 4 COLUNAS ---
+        st.markdown("### 📋 Comparativo Detalhado de Eficiência Tributária")
+        
+        dados_relatorio = {
+            "Descrição / Etapa": [
+                "1. (+) Receita Bruta Mensal",
+                "2. (-) Despesas Operacionais",
+                "3. (-) Depreciação (Benefício Fiscal)",
+                "4. (=) Base de Cálculo do Imposto",
+                "5. (X) Alíquota Efetiva Estimada",
+                "6. (-) VALOR TOTAL DO IMPOSTO",
+                "7. (=) DINHEIRO LÍQUIDO NO BOLSO"
+            ],
+            "Pessoa Física (CPF)": [
+                f"R$ {aluguel_bruto:,.2f}",
+                f"R$ {taxa_adm + iptu_cond + manutencao:,.2f}",
+                "Não Aplicável",
+                f"R$ {base_pf:,.2f}",
+                "27,5% (Tabela)",
+                f"R$ {imposto_pf:,.2f}",
+                f"R$ {aluguel_bruto - imposto_pf:,.2f}"
+            ],
+            "Lucro Presumido": [
+                f"R$ {aluguel_bruto:,.2f}",
+                "Custos não abatem base",
+                "Não Aplicável",
+                f"R$ {aluguel_bruto * 0.32:,.2f} (Presunção)",
+                "11.33% (Fixa)",
+                f"R$ {imposto_presumido:,.2f}",
+                f"R$ {aluguel_bruto - imposto_presumido:,.2f}"
+            ],
+            "Lucro Real (Expert)": [
+                f"R$ {aluguel_bruto:,.2f}",
+                f"R$ {taxa_adm + iptu_cond + manutencao + contabilidade + seguros_taxas:,.2f}",
+                f"R$ {depreciacao_mensal:,.2f}",
+                f"R$ {lucro_liquido_real:,.2f}",
+                "34,0% s/ Lucro",
+                f"R$ {imposto_real:,.2f}",
+                f"R$ {aluguel_bruto - imposto_real:,.2f}"
+            ]
+        }
+        
+        st.table(pd.DataFrame(dados_relatorio))
+
+        # --- MENSAGEM DE IMPACTO ---
+        melhor_opcao = min(imposto_pf, imposto_presumido, imposto_real)
+        economia_maxima = imposto_pf - melhor_opcao
+        
+        st.success(f"🎯 **Estratégia de Elisão:** Ao migrar para a estrutura de Holding, você economiza **R$ {economia_maxima:,.2f} todos os meses**.")
+
+        # BOTÃO WHATSAPP
+        msg = f"Olá Glauber, sou {nome_cliente}. Simulei na Holding Patrimônio e vi que posso economizar R$ {economia_maxima:,.2f} por mês. Quero iniciar minha transição fiscal!"
         link_wa = f"https://wa.me/5537991478808?text={msg.replace(' ', '%20')}"
-        st.link_button("Falar com o Especialista Agora 📲", link_wa, type="primary")
+        st.link_button("Maximizar minha Elisão Fiscal Agora 📲", link_wa, type="primary")
 
-        # Registro na Planilha (Opcional)
+        # Salvar na planilha
         try:
-            df_novo = pd.DataFrame([{"Data": pd.Timestamp.now(), "Nome": nome_cliente, "Whats": whats_cliente, "Economia": economia}])
+            df_novo = pd.DataFrame([{"Data": pd.Timestamp.now(), "Nome": nome_cliente, "Economia": economia_maxima}])
             conn.create(data=df_novo)
-        except:
-            pass
+        except: pass
