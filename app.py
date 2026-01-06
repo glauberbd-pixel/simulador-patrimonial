@@ -3,7 +3,7 @@ import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 
 # --- CONFIGURAÇÃO VISUAL PREMIUM ---
-st.set_page_config(page_title="Holding Patrimônio | Inteligência Tributária", layout="wide")
+st.set_page_config(page_title="Holding Patrimônio | Inteligência Sucessória", layout="wide")
 st.markdown("""
     <style>
     .main { background-color: #0c0c0c; color: #e0e0e0; }
@@ -19,114 +19,93 @@ except:
     pass
 
 st.title("🏛️ HOLDING PATRIMÔNIO")
-st.subheader("Simulador de Inteligência Fiscal e Sucessória")
+st.subheader("Simulador de Inteligência Fiscal e Sucessória (Lei 2026)")
 
-# --- ENTRADA DE DADOS UNIFICADA E SUGESTIVA ---
+# --- ENTRADA DE DADOS UNIFICADA ---
 with st.sidebar:
     st.header("👤 Identificação")
     nome_cliente = st.text_input("Nome do Investidor")
     whats_cliente = st.text_input("WhatsApp (com DDD)")
     
     st.markdown("---")
-    st.header("💰 Receita de Locação")
-    aluguel_bruto = st.number_input("Receita Bruta Mensal (R$)", value=20000.0, step=1000.0)
+    st.header("💰 Patrimônio e Renda")
+    valor_patrimonio = st.number_input("Valor Total do Patrimônio (R$)", value=2000000.0, step=100000.0)
+    aluguel_bruto = st.number_input("Receita de Aluguéis Mensal (R$)", value=20000.0, step=1000.0)
     
     st.markdown("---")
-    st.header("📑 Despesas Operacionais")
-    st.caption("Preencha todos os custos que você tem com seus imóveis e gestão:")
-    
-    # Lista Única e Sugestiva
-    taxa_adm = st.number_input("Comissão de Imobiliária/Adm", value=aluguel_bruto*0.1)
-    iptu_cond = st.number_input("IPTU e Condomínio (Pagos pelo Proprietário)", value=1000.0)
-    manutencao = st.number_input("Manutenções e Reformas nos Imóveis", value=500.0)
+    st.header("📑 Despesas Operacionais Sugeridas")
+    st.caption("Custos que reduzem sua base de imposto:")
+    taxa_adm = st.number_input("Adm. Imobiliária (10%)", value=aluguel_bruto*0.1)
+    iptu_cond = st.number_input("IPTU e Condomínio (Anual/12)", value=1000.0)
+    manutencao = st.number_input("Manutenção e Reformas", value=500.0)
     contabilidade = st.number_input("Contabilidade e Jurídico", value=800.0)
-    seguros_taxas = st.number_input("Seguros e Taxas Bancárias", value=200.0)
     
-    # Depreciação (Sugerida para Lucro Real)
-    valor_imoveis = st.number_input("Valor total dos Imóveis (para cálculo de Depreciação)", value=1000000.0)
-    depreciacao_mensal = (valor_imoveis * 0.04) / 12 # 4% ao ano
+    # Cálculo automático de Depreciação
+    depreciacao_mensal = (valor_patrimonio * 0.04) / 12
     
-    botao_calcular = st.button("GERAR RAIO-X DE ELISÃO FISCAL 🚀", type="primary")
+    botao_calcular = st.button("GERAR RAIO-X COMPLETO 🚀", type="primary")
 
-# --- LÓGICA DE SEPARAÇÃO PARA RELATÓRIO ---
+# --- PROCESSAMENTO DOS RELATÓRIOS ---
 if botao_calcular:
     if not nome_cliente or not whats_cliente:
-        st.error("Por favor, identifique-se para gerar o relatório.")
+        st.error("Por favor, preencha os dados de identificação.")
     else:
-        # 1. CÁLCULO PESSOA FÍSICA (Carnê-Leão)
-        # Deduções permitidas: Adm, IPTU, Condomínio e Manutenções essenciais
+        # 1. CÁLCULO DE RENDA MENSAL (4 Colunas)
         base_pf = aluguel_bruto - taxa_adm - iptu_cond - manutencao
-        if base_pf < 0: base_pf = 0
-        imposto_pf = (base_pf * 0.275) - 896
-        
-        # 2. CÁLCULO LUCRO PRESUMIDO
-        # Imposto fixo sobre a receita (aprox. 11.33% a 14.53% dependendo da cidade)
+        imposto_pf = (max(0, base_pf) * 0.275) - 896
         imposto_presumido = aluguel_bruto * 0.1133
         
-        # 3. CÁLCULO LUCRO REAL (Onde a elisão é maximizada)
-        # Todas as despesas deduzem + Depreciação (despesa sem saída de caixa)
-        total_despesas_real = taxa_adm + iptu_cond + manutencao + contabilidade + seguros_taxas + depreciacao_mensal
-        lucro_liquido_real = aluguel_bruto - total_despesas_real
-        if lucro_liquido_real < 0: lucro_liquido_real = 0
-        imposto_real = lucro_liquido_real * 0.34 # IRPJ + CSLL
+        total_despesas_real = taxa_adm + iptu_cond + manutencao + contabilidade + depreciacao_mensal
+        imposto_real = max(0, (aluguel_bruto - total_despesas_real)) * 0.34
 
-        # --- RELATÓRIO FINAL EM 4 COLUNAS ---
-        st.markdown("### 📋 Comparativo Detalhado de Eficiência Tributária")
+        # 2. CÁLCULO SUCESSÓRIO (Inventário x Holding)
+        # Custos Médios 2026: ITCMD Progressivo (est. 6%), Advogado (10%), Custas (2%)
+        custo_itcmd = valor_patrimonio * 0.06
+        custo_advogado = valor_patrimonio * 0.10
+        custo_inventario_total = custo_itcmd + custo_advogado + (valor_patrimonio * 0.02)
         
-        dados_relatorio = {
-            "Descrição / Etapa": [
-                "1. (+) Receita Bruta Mensal",
-                "2. (-) Despesas Operacionais",
-                "3. (-) Depreciação (Benefício Fiscal)",
-                "4. (=) Base de Cálculo do Imposto",
-                "5. (X) Alíquota Efetiva Estimada",
-                "6. (-) VALOR TOTAL DO IMPOSTO",
-                "7. (=) DINHEIRO LÍQUIDO NO BOLSO"
-            ],
-            "Pessoa Física (CPF)": [
-                f"R$ {aluguel_bruto:,.2f}",
-                f"R$ {taxa_adm + iptu_cond + manutencao:,.2f}",
-                "Não Aplicável",
-                f"R$ {base_pf:,.2f}",
-                "27,5% (Tabela)",
-                f"R$ {imposto_pf:,.2f}",
-                f"R$ {aluguel_bruto - imposto_pf:,.2f}"
-            ],
-            "Lucro Presumido": [
-                f"R$ {aluguel_bruto:,.2f}",
-                "Custos não abatem base",
-                "Não Aplicável",
-                f"R$ {aluguel_bruto * 0.32:,.2f} (Presunção)",
-                "11.33% (Fixa)",
-                f"R$ {imposto_presumido:,.2f}",
-                f"R$ {aluguel_bruto - imposto_presumido:,.2f}"
-            ],
-            "Lucro Real (Expert)": [
-                f"R$ {aluguel_bruto:,.2f}",
-                f"R$ {taxa_adm + iptu_cond + manutencao + contabilidade + seguros_taxas:,.2f}",
-                f"R$ {depreciacao_mensal:,.2f}",
-                f"R$ {lucro_liquido_real:,.2f}",
-                "34,0% s/ Lucro",
-                f"R$ {imposto_real:,.2f}",
-                f"R$ {aluguel_bruto - imposto_real:,.2f}"
-            ]
+        custo_holding_sucessao = valor_patrimonio * 0.03 # Custo de estruturação e gatilhos sucessórios
+
+        # --- EXIBIÇÃO RELATÓRIO 1: EFICIÊNCIA DE RENDA ---
+        st.markdown("## 📋 1. Eficiência Tributária Mensal")
+        dados_renda = {
+            "Etapa do Cálculo": ["Receita Bruta", "Despesas Operacionais", "Depreciação (Isenção)", "Imposto Total", "Líquido Final"],
+            "Pessoa Física": [f"R$ {aluguel_bruto:,.2f}", f"R$ {taxa_adm+iptu_cond:,.2f}", "Não permite", f"R$ {imposto_pf:,.2f}", f"R$ {aluguel_bruto-imposto_pf:,.2f}"],
+            "Lucro Presumido": [f"R$ {aluguel_bruto:,.2f}", "Não abate", "Não permite", f"R$ {imposto_presumido:,.2f}", f"R$ {aluguel_bruto-imposto_presumido:,.2f}"],
+            "Lucro Real (Expert)": [f"R$ {aluguel_bruto:,.2f}", f"R$ {taxa_adm+iptu_cond+contabilidade:,.2f}", f"R$ {depreciacao_mensal:,.2f}", f"R$ {imposto_real:,.2f}", f"R$ {aluguel_bruto-imposto_real:,.2f}"]
         }
-        
-        st.table(pd.DataFrame(dados_relatorio))
+        st.table(pd.DataFrame(dados_renda))
 
-        # --- MENSAGEM DE IMPACTO ---
-        melhor_opcao = min(imposto_pf, imposto_presumido, imposto_real)
-        economia_maxima = imposto_pf - melhor_opcao
+        st.markdown("---")
+
+        # --- EXIBIÇÃO RELATÓRIO 2: CUSTO SUCESSÓRIO (INVENTÁRIO) ---
+        st.markdown("## ⚰️ 2. Proteção de Herança: Inventário x Holding")
+        st.warning("⚠️ Com a Lei de 2026, o ITCMD progressivo pode consumir até 20% do patrimônio no inventário.")
         
-        st.success(f"🎯 **Estratégia de Elisão:** Ao migrar para a estrutura de Holding, você economiza **R$ {economia_maxima:,.2f} todos os meses**.")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Perda no Inventário", f"R$ {custo_inventario_total:,.2f}", "Custas + Imposto + Advogado", delta_color="inverse")
+        with col2:
+            st.metric("Custo na Holding", f"R$ {custo_holding_sucessao:,.2f}", f"Economia de R$ {custo_inventario_total - custo_holding_sucessao:,.2f}")
+
+        st.markdown("### Detalhamento da Perda Patrimonial")
+        dados_sucessao = {
+            "Custos Previstos": ["ITCMD (Imposto de Causa Mortis)", "Honorários Advocatícios (Litigioso/Judicial)", "Custas Processuais e Cartórios", "Total de Perda Patrimonial"],
+            "Cenário: Inventário": [f"R$ {custo_itcmd:,.2f} (Progressivo)", f"R$ {custo_advogado:,.2f} (10%)", f"R$ {valor_patrimonio*0.02:,.2f}", f"R$ {custo_inventario_total:,.2f}"],
+            "Cenário: Holding": ["Pago na Doação de Cotas", "Consultoria Prévia", "Taxas de Junta Comercial", f"R$ {custo_holding_sucessao:,.2f}"]
+        }
+        st.table(pd.DataFrame(dados_sucessao))
+
+        # CONCLUSÃO FINAL
+        st.success(f"🎯 **Resumo Estratégico:** Além de ganhar R$ {imposto_pf - min(imposto_presumido, imposto_real):,.2f} a mais por mês, você evita que sua família perca R$ {custo_inventario_total - custo_holding_sucessao:,.2f} em um futuro inventário.")
 
         # BOTÃO WHATSAPP
-        msg = f"Olá Glauber, sou {nome_cliente}. Simulei na Holding Patrimônio e vi que posso economizar R$ {economia_maxima:,.2f} por mês. Quero iniciar minha transição fiscal!"
+        msg = f"Olá Glauber, sou {nome_cliente}. Fiz a simulação completa. Vi que posso economizar no mensal e evitar uma perda de R$ {custo_inventario_total:,.2f} no inventário. Quero proteger meu patrimônio!"
         link_wa = f"https://wa.me/5537991478808?text={msg.replace(' ', '%20')}"
-        st.link_button("Maximizar minha Elisão Fiscal Agora 📲", link_wa, type="primary")
+        st.link_button("Blindar meu Patrimônio Agora 📲", link_wa, type="primary")
 
         # Salvar na planilha
         try:
-            df_novo = pd.DataFrame([{"Data": pd.Timestamp.now(), "Nome": nome_cliente, "Economia": economia_maxima}])
+            df_novo = pd.DataFrame([{"Data": pd.Timestamp.now(), "Nome": nome_cliente, "Economia_Mensal": imposto_pf - imposto_presumido, "Risco_Inventario": custo_inventario_total}])
             conn.create(data=df_novo)
         except: pass
